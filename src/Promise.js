@@ -56,6 +56,12 @@ Ext.define('Ext.ux.Promise', {
     failureQueue: [],
 
     /**
+     * Internal always queue
+     * @private
+     */
+    alwaysQueue: [],
+
+    /**
      * Internal finally queue
      * @private
      */
@@ -82,6 +88,7 @@ Ext.define('Ext.ux.Promise', {
         // Reset internal configurations
         me.successQueue = [];
         me.failureQueue = [];
+        me.alwaysQueue  = [];
         me.finallyQueue = [];
         me.deferred     = null;
 
@@ -205,18 +212,20 @@ Ext.define('Ext.ux.Promise', {
      * They are called by deferred.resolve and deferred.reject
      * @param {Function} onSuccess Success callback, called by deferred.resolve
      * @param {Function} onFailure Failure callback, called by deferred.reject
+     * @param {Function} onAlways  Always callback, called by deferred.resolve/reject
      * @param {Function} onFinally Finally callback, called by deferred.resolve/reject
      * @return {Ext.ux.Promise} this
      */
-    then: function (onSuccess, onFailure, onFinally) {
+    then: function (onSuccess, onFailure, onAlways, onFinally) {
         var me = this;
 
         if (typeof onSuccess !== 'function'
             && typeof onFailure !== 'function'
+            && typeof onAlways !== 'function'
             && typeof onFinally !== 'function')
         {
             throw new Error(
-                'Ext.ux.Promise.then(): onSuccess or onFailure'
+                'Ext.ux.Promise.then(): onSuccess or onFailure or onAlways'
                 + ' or onFinally callback is needed'
             );
         }
@@ -225,6 +234,7 @@ Ext.define('Ext.ux.Promise', {
 
         if (typeof onSuccess === 'function') me.successQueue.push(onSuccess);
         if (typeof onFailure === 'function') me.failureQueue.push(onFailure);
+        if (typeof onAlways  === 'function') me.alwaysQueue.push(onAlways);
         if (typeof onFinally === 'function') me.finallyQueue.push(onFinally);
 
         return me.deferred.promise();
@@ -274,6 +284,18 @@ Ext.define('Ext.ux.Promise', {
      */
     fail: function (onFailure) {
         this.then(undefined, onFailure);
+
+        return this;
+    },
+
+    /**
+     * @method always
+     * Attaches the always callback to the promise
+     * @param {Function} onAlways Callback executed after the promise is success/failure
+     * @returns {Ext.ux.Promise} Return itself
+     */
+    always: function (onAlways) {
+        this.then(undefined, undefined, onAlways);
 
         return this;
     },

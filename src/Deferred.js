@@ -93,6 +93,17 @@ Ext.define('Ext.ux.Deferred', {
     },
 
     /**
+     * @method always
+     * Launch the callback attached with then (or always) method.
+     * The given data is passed to the callback
+     * @param {Object} args Data to pass to the attached function
+     * @return {Ext.ux.Deferred} this
+     */
+    always: function () {
+        return this.internalPromise.always.apply(this.internalPromise, arguments);
+    },
+
+    /**
      * @method promise
      * Provides a new instance of Ext.ux.Promise
      * @return {Ext.ux.Promise} The promise
