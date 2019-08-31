@@ -73,7 +73,7 @@ Ext.define('Ext.ux.Deferred', {
     /**
      * @method resolve
      * Solve the promise and launch the callback attached with then (or success or done) method.
-     * The given data is passed to the ballback
+     * The given data is passed to the callback
      * @param {Object} args Data to pass to the attached function
      * @return {Ext.ux.Deferred} this
      */
@@ -84,7 +84,7 @@ Ext.define('Ext.ux.Deferred', {
     /**
      * @method reject
      * Reject the promise and launch the callback attached with then (or failure or fail) method.
-     * The given data is passed to the ballback
+     * The given data is passed to the callback
      * @param {Object} args Data to pass to the attached function
      * @return {Ext.ux.Deferred} this
      */
