@@ -56,13 +56,19 @@ Ext.define('Ext.ux.Promise', {
     failureQueue: [],
 
     /**
+     * Internal finally queue
+     * @private
+     */
+    finallyQueue: [],
+
+    /**
      * Creates a new promise
      * @param {object} cfg The configuration options may be specified as follows:
      *
      *     // with a configuration set
      *     var config = {
-	 *       deferred: deferred // deferred is an instace of Ext.ux.Deferred
-	 *     };
+     *       deferred: deferred // deferred is an instace of Ext.ux.Deferred
+     *     };
      *
      *     var promise = Ext.create('Ext.ux.Promise', config);
      *
@@ -76,7 +82,8 @@ Ext.define('Ext.ux.Promise', {
         // Reset internal configurations
         me.successQueue = [];
         me.failureQueue = [];
-        me.deferred = null;
+        me.finallyQueue = [];
+        me.deferred     = null;
 
         return me;
     },
@@ -118,6 +125,8 @@ Ext.define('Ext.ux.Promise', {
                 me.deferred.resolve(results);
             }
         }
+
+        me.doFinally();
     },
 
     /**
@@ -154,6 +163,40 @@ Ext.define('Ext.ux.Promise', {
                 me.deferred.reject(results);
             }
         }
+
+        me.doFinally();
+    },
+
+    /**
+     * @method
+     * doFinally
+     * @private
+     */
+    doFinally: function () {
+        var me      = this,
+            results = [],
+            errors  = [],
+            args    = Array.prototype.slice.call(arguments, 0);
+
+        if (me.finallyQueue.length <= 0)
+            return;
+
+        while (me.finallyQueue.length > 0) {
+            var onFinally = me.finallyQueue.shift();
+
+            if (typeof onFinally !== 'function')
+                continue;
+
+            try {
+                var result = onFinally.apply(null, arguments);
+
+                if (result)
+                    results.push(result);
+            }
+            catch (err) {
+                errors.push(err);
+            }
+        }
     },
 
     /**
@@ -162,17 +205,27 @@ Ext.define('Ext.ux.Promise', {
      * They are called by deferred.resolve and deferred.reject
      * @param {Function} onSuccess Success callback, called by deferred.resolve
      * @param {Function} onFailure Failure callback, called by deferred.reject
+     * @param {Function} onFinally Finally callback, called by deferred.resolve/reject
      * @return {Ext.ux.Promise} this
      */
-    then: function (onSuccess, onFailure) {
+    then: function (onSuccess, onFailure, onFinally) {
         var me = this;
 
-        if (typeof onSuccess !== 'function' && typeof onFailure !== 'function') throw new Error('Ext.ux.Promise.then(): onSuccess or onFailure callback is needed');
+        if (typeof onSuccess !== 'function'
+            && typeof onFailure !== 'function'
+            && typeof onFinally !== 'function')
+        {
+            throw new Error(
+                'Ext.ux.Promise.then(): onSuccess or onFailure'
+                + ' or onFinally callback is needed'
+            );
+        }
 
         if (!(me.deferred instanceof Ext.ux.Deferred)) me.deferred = Ext.create('Ext.ux.Deferred');
 
         if (typeof onSuccess === 'function') me.successQueue.push(onSuccess);
         if (typeof onFailure === 'function') me.failureQueue.push(onFailure);
+        if (typeof onFinally === 'function') me.finallyQueue.push(onFinally);
 
         return me.deferred.promise();
     },
@@ -221,6 +274,18 @@ Ext.define('Ext.ux.Promise', {
      */
     fail: function (onFailure) {
         this.then(undefined, onFailure);
+
+        return this;
+    },
+
+    /**
+     * @method finally
+     * Attaches the finally callback to the promise
+     * @param {Function} onFinally Callback executed after the promise is success/failure
+     * @returns {Ext.ux.Promise} Return itself
+     */
+    finally: function (onFinally) {
+        this.then(undefined, undefined, undefined, onFinally);
 
         return this;
     },
